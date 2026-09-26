@@ -66,15 +66,21 @@
 
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+![c4](apps/diagrams/container.png)
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+*Диаграмма компонентов ManagementSystem*
+
+![c4](apps/diagrams/component_managmet_system.png)
+
+*Диаграмма компонентов MonitoringSystem*
+
+![c4](apps/diagrams/component_monitoring_system.png)
 
 **Диаграмма кода (Code)**
+![c4](apps/diagrams/class.png)
 
-Добавьте одну диаграмму или несколько.
 
 # Задание 3. Разработка ER-диаграммы
 
