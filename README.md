@@ -59,7 +59,7 @@
 Добавьте сюда диаграмму контекста в модели C4.
 
 ```markdown
-![context_c4.png](apps/diagrams/context_c4.png)
+![context_c4.png](./apps/diagrams/context_c4.png)
 ```
 
 # Задание 2. Проектирование микросервисной архитектуры
