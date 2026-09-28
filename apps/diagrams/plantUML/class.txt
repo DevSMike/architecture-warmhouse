@@ -1,0 +1,74 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam class {
+    BackgroundColor<<error>>    #FFE0E0
+    BorderColor<<error>>        #C62828
+    BackgroundColor<<DTO>>      #F0F7FF
+    BackgroundColor<<external>> #F5F5F5
+}
+
+title C4 Class: MonitoringService — взаимодействия + ошибки
+
+' ===== Внешние границы =====
+interface MonitoringRepository <<interface>>
+class KafkaConsumer <<external>>
+
+' ===== Адаптеры входа =====
+class MonitoringController <<HTTP>>
+class DeviceListener       <<Kafka>>
+class ManagementListener   <<Kafka>>
+
+' ===== Ядро =====
+class MonitoringService <<service>>
+
+' ===== DTO / домен / события =====
+class DeviceDTO           <<DTO>>
+class HealthCheckRequest  <<DTO>>
+class HealthCheckResponse <<DTO>>
+class Device              <<entity>>
+class DeviceEvent         <<event>>
+class ManagementEvent     <<event>>
+
+' ===== Инфраструктура =====
+class ClickHouseRepo <<Repository>>
+
+' ===== Ошибки =====
+class ValidationError  <<error>>
+class NotFoundError    <<error>>
+class RepositoryError  <<error>>
+class KafkaDecodeError <<error>>
+
+' ===== Адаптеры → ядро =====
+MonitoringController --> MonitoringService : uses
+DeviceListener       --> MonitoringService : uses
+ManagementListener   --> MonitoringService : uses
+
+' ===== Ядро → порт =====
+MonitoringService ..> MonitoringRepository : depends on
+ClickHouseRepo    ..|> MonitoringRepository : implements
+
+' ===== Ядро → DTO/домен/события =====
+MonitoringService --> HealthCheckRequest  : accepts
+MonitoringService --> HealthCheckResponse : returns
+MonitoringService --> DeviceDTO           : returns
+MonitoringService --> Device              : manages
+MonitoringService --> DeviceEvent         : consumes
+MonitoringService --> ManagementEvent     : consumes
+
+' ===== Листенеры → события =====
+DeviceListener     --> DeviceEvent     : consumes
+ManagementListener --> ManagementEvent : consumes
+
+' ===== Внешняя инфраструктура =====
+KafkaConsumer <.. DeviceListener     : uses
+KafkaConsumer <.. ManagementListener : uses
+
+' ===== Ошибки =====
+MonitoringService ..> ValidationError  : throws
+MonitoringService ..> NotFoundError    : throws
+MonitoringService ..> RepositoryError  : wraps
+
+DeviceListener     ..> KafkaDecodeError : throws
+ManagementListener ..> KafkaDecodeError : throws
+@enduml
