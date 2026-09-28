@@ -106,7 +106,7 @@
 
 # Задание 5. Работа с docker и docker-compose
 
-**Ответ**: реализованный docker compose: apps/docker-compose.yml
+**Ответ**: реализованный docker compose: [docker-compose](apps/docker-compose.yml)
 
 **Задание**:
 
