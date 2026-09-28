@@ -101,8 +101,9 @@
 
 ### 2. Документация API
 
-[OpenAPI Documentation](apps/docs/open_api_html/openApi.html)
-[AsyncAPI Documentation](apps/docs/async_api_html/index.html)
+[OpenAPI Documentation](https://devsmike.github.io/architecture-warmhouse/open_api_html/openApi.html)
+
+[AsyncAPI Documentation](https://devsmike.github.io/architecture-warmhouse/async_api_html/index.html)
 
 # Задание 5. Работа с docker и docker-compose
 
