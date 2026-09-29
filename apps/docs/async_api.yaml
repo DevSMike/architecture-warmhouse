@@ -1,0 +1,30 @@
+asyncapi: '3.0.0'
+info:
+  title: Smart Home Device Commands
+  version: 1.0.0
+
+channels:
+  temperatureCommands:
+    address: 'devices.commands.temperature'
+    messages:
+      temperatureCommand:
+        $ref: '#/components/messages/TemperatureCommand'
+
+operations:
+  publishTemperatureCommand:
+    action: send
+    channel:
+      $ref: '#/channels/temperatureCommands'
+
+components:
+  messages:
+    TemperatureCommand:
+      payload:
+        type: object
+        required: [userId, houseId, deviceId, value, timestamp]
+        properties:
+          userId:   { type: integer, format: int64, example: 1001 }
+          houseId:  { type: integer, format: int64, example: 2001 }
+          deviceId: { type: integer, format: int64, example: 3001 }
+          value:    { type: number, format: float, example: 23.5 }
+          timestamp: { type: string, format: date-time, example: 1782765180000 }

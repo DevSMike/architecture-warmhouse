@@ -1,0 +1,364 @@
+openapi: 3.0.3
+info:
+  title: Smart Home API
+  version: 1.0.0
+  description: |
+    REST API для управления устройствами умного дома.
+
+    Асинхронные события (Kafka) описаны отдельно в `docs/asyncapi.yaml`.
+
+    ⚠️ Design note: эндпоинты `GET /monitoring/healthCheck` и
+    `GET /monitoring/devices` принимают тело запроса (JSON).
+    Это валидно по OpenAPI 3.0, но не поддерживается частью HTTP-клиентов.
+servers:
+  - url: http://localhost:8080
+    description: Локальная разработка
+
+tags:
+  - name: Management
+    description: Управление устройствами
+  - name: Monitoring
+    description: Мониторинг и телеметрия
+
+paths:
+
+  /api/v1/management/devices:
+    post:
+      tags: [Management]
+      summary: Добавить новое устройство
+      description: |
+        Создаёт новое устройство. Поле `typeId` вычисляется сервисом
+        на основе `type` и мапится с таблицей `DeviceType`.
+      operationId: createDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceRequest'
+      responses:
+        '201':
+          description: Устройство успешно создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          description: Некорректные параметры (рекомендуемый код)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера (в т.ч. ошибки валидации по ТЗ)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags: [Management]
+      summary: Изменить температуру на конкретном датчике (async)
+      description: |
+        Публикует команду в Kafka и **не ждёт** ответа от устройства.
+        Устройства получают команду через MQTT-мост.
+      operationId: updateDeviceTemperature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemperatureUpdateRequest'
+      responses:
+        '200':
+          description: Команда успешно отправлена в Kafka
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Не удалось подключиться к Kafka или иная серверная ошибка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/monitoring/healthCheck:
+    get:
+      tags: [Monitoring]
+      summary: Проверка здоровья системы
+      description: |
+        Находит все устройства пользователя в доме и получает последние
+        метрики из MonitoringDB.
+
+        ⚠️ Тело запроса у GET — валидно в OpenAPI 3.0, но часть
+        HTTP-клиентов такое не поддерживает.
+      operationId: getHealthCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HealthCheckRequest'
+      responses:
+        '200':
+          description: Все устройства в норме
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckOkResponse'
+        '503':
+          description: Обнаружены устройства с проблемными метриками
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProblematicTelemetry'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/monitoring/devices:
+    get:
+      tags: [Monitoring]
+      summary: Снять показания с умного устройства
+      description: |
+        Возвращает последние N метрик из `TelemetryData`.
+        По умолчанию глубина = 10.
+
+        ⚠️ Тело запроса у GET — валидно в OpenAPI 3.0, но часть
+        HTTP-клиентов такое не поддерживает.
+      operationId: getDeviceTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetryQueryRequest'
+      responses:
+        '200':
+          description: Метрики успешно получены
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryData'
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+
+    # --- Requests ---
+    CreateDeviceRequest:
+      type: object
+      required: [userId, name, location, serialNumber, type]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          description: ID пользователя (bigint)
+          example: 1001
+        name:
+          type: string
+          description: Название устройства (varchar)
+          maxLength: 255
+          example: Kitchen Sensor
+        location:
+          type: string
+          description: Расположение устройства (varchar)
+          maxLength: 255
+          example: Kitchen
+        serialNumber:
+          type: string
+          description: Серийный номер (varchar)
+          maxLength: 100
+          example: SN-0001
+        type:
+          type: string
+          description: |
+            Тип устройства (varchar). Сервис мапит его на `typeId`
+            в таблице `DeviceType`.
+          maxLength: 50
+          example: TEMPERATURE
+
+    TemperatureUpdateRequest:
+      type: object
+      required: [userId, houseId, deviceId, value]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          example: 1001
+        houseId:
+          type: integer
+          format: int64
+          example: 2001
+        deviceId:
+          type: integer
+          format: int64
+          example: 3001
+        value:
+          type: number
+          description: Новое значение температуры (numeric)
+          example: 23.5
+
+    HealthCheckRequest:
+      type: object
+      required: [userId, houseId]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          example: 1001
+        houseId:
+          type: integer
+          format: int64
+          example: 2001
+
+    TelemetryQueryRequest:
+      type: object
+      required: [userId, houseId, deviceId]
+      properties:
+        userId:
+          type: integer
+          format: int64
+          example: 1001
+        houseId:
+          type: integer
+          format: int64
+          example: 2001
+        deviceId:
+          type: integer
+          format: int64
+          example: 3001
+        depth:
+          type: integer
+          default: 10
+          minimum: 1
+          maximum: 100
+          description: Глубина выборки (кол-во последних метрик)
+
+    # --- Responses ---
+    DeviceResponse:
+      type: object
+      required: [id, name, location, serialNumber, typeId, type]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 3001
+        name:
+          type: string
+          example: Kitchen Sensor
+        location:
+          type: string
+          example: Kitchen
+        serialNumber:
+          type: string
+          example: SN-0001
+        typeId:
+          type: integer
+          format: int64
+          description: ID типа устройства из DeviceType
+          example: 10
+        type:
+          type: string
+          example: TEMPERATURE
+
+    AcceptedResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: accepted
+        message:
+          type: string
+          example: Command sent to device
+
+    HealthCheckOkResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: OK
+
+    ProblematicTelemetry:
+      type: object
+      required: [timestamp, name, value]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Время метрики (timestamp)
+          example: "2026-09-28T10:00:00Z"
+        name:
+          type: string
+          description: Название устройства (varchar)
+          example: Kitchen Sensor
+        value:
+          type: number
+          description: Проблемное значение (numeric)
+          example: 99.9
+
+    TelemetryData:
+      type: object
+      required: [id, value, timestamp, indicator]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID устройства (bigint) — соответствует `device.id` в ТЗ
+          example: 3001
+        value:
+          type: number
+          description: Значение метрики (numeric)
+          example: 23.5
+        timestamp:
+          type: string
+          format: date-time
+          description: Время метрики (timestamp)
+          example: "2026-09-28T10:00:00Z"
+        indicator:
+          type: string
+          description: Единица измерения для графика (varchar)
+          example: "°C"
+
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string

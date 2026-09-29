@@ -1,0 +1,34 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title C4 Container: умный дом — устройства, телеметрия, управление
+
+Person(user, "Пользователь", "Добавляет устройства, мониторит и взаимодействует с ними")
+
+System_Boundary(home, "Платформа умного дома") {
+    Container(web, "Web Application", "React", "UI: устройства, графики")
+
+    Container(management, "Management System", "Go", "Управление умными вещами")
+    ContainerDb(managementDB, "Management DB", "PostgreSQL", "Умные устройства пользователя")
+
+    ContainerQueue(manageKafka, "Event Bus", "Kafka", "События добавления, удаления, обновления умного устройства")
+
+    Container(monitoring, "Monitoring System", "Go", "Собирает показания, отдаёт историю и текущее состояние")
+    ContainerDb(monitoringDB, "Monitoring DB", "ClickHouse", "Метрики умных устройств")
+}
+
+System_Ext(devices, "Устройства умного дома", "Датчики температуры, реле")
+
+Rel(user, web, "Использует", "HTTPS")
+Rel(web, management, "Добавление, удаление и обновление устройств", "HTTPS/JSON")
+Rel(web, monitoring, "Запросы истории и текущего состояния", "HTTPS/JSON")
+
+Rel(management, managementDB, "Читает/пишет", "SQL")
+Rel(management, manageKafka, "Публикует события умных устройств", "Kafka")
+Rel(manageKafka, monitoring, "Доставляет события", "Kafka")
+
+Rel(devices, manageKafka, "Публикуют телеметрию и состояние", "MQTT")
+Rel(manageKafka, devices, "Обновляют состояние", "MQTT")
+
+Rel(monitoring, monitoringDB, "Пишет метрики", "SQL")
+@enduml
