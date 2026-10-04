@@ -1,0 +1,29 @@
+@startuml
+!include <C4/C4_Component>
+
+title С4 Component: Monitoring System
+
+Container_Ext(gateway, "Gateway", "Go", "Маршутизация API, rate limiting")
+System_Ext(kafka, "Kafka", "Event Bus")
+System_Ext(sensors, "Devices", "Устройства умного дома")
+ContainerDb_Ext(db, "Monitoring DB", "ClickHouse", "Метрики умных устройств")
+
+Container_Boundary(ms, "Management System") {
+    Component(controller, "Monitoring Controller", "Go", "Приём REST-запросов")
+    Component(service, "Monitoring Service", "Go", "Обработка REST-запросов")
+    Component(repo, "Monitoring Repository", "sqlc", "Доступ к данным")
+    Component(consumer, "Management Listener", "kafka-go", "Потребление событий")
+    Component(consumerSensors, "Device Listener", "kafka-go", "Потребление событий")
+
+}
+
+Rel(gateway, controller, "REST", "HTTPS/JSON")
+Rel(sensors, kafka, "Публикует")
+Rel(controller, service, "Вызывает")
+Rel(service, repo, "Использует")
+Rel(repo, db, "Читает/пишет", "SQL")
+Rel(consumer, service, "Вызывает")
+Rel(consumerSensors, service, "Вызывает")
+Rel(kafka, consumer, "Потребляет")
+Rel(kafka, consumerSensors, "Потребляет")
+@enduml

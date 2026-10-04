@@ -1,0 +1,23 @@
+@startuml
+!include <C4/C4_Component>
+
+title С4 Component: Management System
+
+Container_Ext(gateway, "Gateway", "Go", "Маршутизация API, rate limiting")
+System_Ext(kafka, "Kafka", "Event Bus")
+ContainerDb_Ext(db, "Management DB", "PostgreSQL", "Умные устройства пользователя")
+
+Container_Boundary(ms, "Management System") {
+    Component(controller, "Management Controller", "Go", "Приём REST-запросов")
+    Component(service, "Management Service", "Go", "Обработка REST-запросов")
+    Component(repo, "Management Repository", "sqlc", "Доступ к данным")
+    Component(publisher, "Management Publisher", "kafka-go", "Публикация событий")
+}
+
+Rel(gateway, controller, "REST", "HTTPS/JSON")
+Rel(controller, service, "Вызывает")
+Rel(service, repo, "Использует")
+Rel(repo, db, "Читает/пишет", "SQL")
+Rel(service, publisher, "Отправляет событие")
+Rel(publisher, kafka, "Публикует")
+@enduml

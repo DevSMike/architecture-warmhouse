@@ -1,0 +1,14 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+' Внешние сущности
+Person(user, "Пользователь", "Пользуется системой умного дома")
+System(system, "Умный Дом", "Система для управления и мониторинга Умного Дома")
+System_Ext(sensors, "Датчики температуры", "Содержат информацию о температуре")
+
+' Потоки данных
+Rel(user, system, "Управляет умным домом")
+Rel(sensors, system, "Предоставление данных о температуре")
+Rel(system, sensors, "Изменение температуры")
+
+@enduml

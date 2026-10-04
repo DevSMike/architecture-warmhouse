@@ -1,0 +1,65 @@
+@startuml
+!define PK(x) <b><u>x</u></b>
+!define FK(x) <i>x</i>
+
+skinparam linetype ortho
+skinparam entity {
+    BackgroundColor #F8F9FA
+    BorderColor #37474F
+    HeaderBackgroundColor #ECEFF1
+}
+
+title ER: Smart Home — User / House / Device / DeviceType / Telemetry
+
+entity "User" as user {
+  PK(id) : bigint
+  --
+  name       : varchar
+  email      : varchar
+  created_at : timestamp
+}
+
+entity "House" as house {
+  PK(id) : bigint
+  --
+  FK(user_id) : bigint
+  name        : varchar
+  address     : varchar
+  created_at  : timestamp
+}
+
+entity "Device" as device {
+  PK(id) : bigint
+  --
+  FK(house_id)  : bigint
+  FK(type_id)   : bigint
+  serial_number : varchar
+  name          : varchar
+  status        : varchar
+  location      : varchar
+  last_updated  : timestamp
+  created_at    : timestamp
+}
+
+entity "DeviceType" as device_type {
+  PK(id) : bigint
+  --
+  type : varchar
+}
+
+entity "TelemetryData" as telemetry {
+  PK(id) : bigint
+  --
+  FK(device_id) : bigint
+  indicator     : varchar
+  value         : numeric
+  timestamp     : timestamp
+}
+
+' ===== Связи =====
+user        ||--o{ house: имеет
+user        ||--o{ device: имеет
+house       ||--o{ device: содержит
+device_type }o--|| device: описывается
+device      ||--o{ telemetry  : генерирует
+@enduml
