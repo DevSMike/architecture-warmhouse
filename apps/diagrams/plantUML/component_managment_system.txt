@@ -3,7 +3,7 @@
 
 title С4 Component: Management System
 
-Container_Ext(web, "Web Application", "React", "UI")
+Container_Ext(gateway, "Gateway", "Go", "Маршутизация API, rate limiting")
 System_Ext(kafka, "Kafka", "Event Bus")
 ContainerDb_Ext(db, "Management DB", "PostgreSQL", "Умные устройства пользователя")
 
@@ -14,7 +14,7 @@ Container_Boundary(ms, "Management System") {
     Component(publisher, "Management Publisher", "kafka-go", "Публикация событий")
 }
 
-Rel(web, controller, "REST", "HTTPS/JSON")
+Rel(gateway, controller, "REST", "HTTPS/JSON")
 Rel(controller, service, "Вызывает")
 Rel(service, repo, "Использует")
 Rel(repo, db, "Читает/пишет", "SQL")

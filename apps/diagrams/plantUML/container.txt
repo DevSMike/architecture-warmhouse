@@ -7,6 +7,7 @@ Person(user, "Пользователь", "Добавляет устройств�
 
 System_Boundary(home, "Платформа умного дома") {
     Container(web, "Web Application", "React", "UI: устройства, графики")
+    Container(gateway, "Gateway", "Go", "Rate limiter, roating")
 
     Container(management, "Management System", "Go", "Управление умными вещами")
     ContainerDb(managementDB, "Management DB", "PostgreSQL", "Умные устройства пользователя")
@@ -20,8 +21,10 @@ System_Boundary(home, "Платформа умного дома") {
 System_Ext(devices, "Устройства умного дома", "Датчики температуры, реле")
 
 Rel(user, web, "Использует", "HTTPS")
-Rel(web, management, "Добавление, удаление и обновление устройств", "HTTPS/JSON")
-Rel(web, monitoring, "Запросы истории и текущего состояния", "HTTPS/JSON")
+Rel(web, gateway, "Маршутизация запросов к API, rate limiting", "HTTPS/JSON")
+
+Rel(gateway, management, "Добавление, удаление и обновление устройств", "HTTPS/JSON")
+Rel(gateway, monitoring, "Запросы истории и текущего состояния", "HTTPS/JSON")
 
 Rel(management, managementDB, "Читает/пишет", "SQL")
 Rel(management, manageKafka, "Публикует события умных устройств", "Kafka")
